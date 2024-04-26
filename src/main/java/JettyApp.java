@@ -67,10 +67,14 @@ public class JettyApp {
         http2c.setMaxConcurrentStreams(1024);
 
         var pool = new QueuedThreadPool();
+        pool.setDetailedDump(true);
         pool.setVirtualThreadsExecutor(Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("jetty-", 0).factory()));
 
         Server server = new Server(pool);
-        ServerConnector connector = new ServerConnector(server, http1, http2c);
+        int acceptors = 1;
+        int selectors = 1;
+        ServerConnector connector = new ServerConnector(server, null, null, null, acceptors, selectors, http1, http2c);
+        connector.setIdleTimeout(3000);
         connector.setPort(port);
         server.addConnector(connector);
 

@@ -1,6 +1,8 @@
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
@@ -63,8 +65,10 @@ public class BehaviorTests
             }
             """;
         try (Socket socket = new Socket(serverURI.getHost(), serverURI.getPort());
-             OutputStream outputStream = socket.getOutputStream())
+             OutputStream outputStream = socket.getOutputStream();
+             InputStream inputStream = socket.getInputStream())
         {
+            socket.setSoTimeout(4000);
             byte[] rawbody = body.getBytes(StandardCharsets.UTF_8);
             String request = """
                 POST /api/hello HTTP/1.1\r
@@ -108,11 +112,26 @@ public class BehaviorTests
                 }
             }
 
-            HttpTester.Input input = HttpTester.from(socket.getInputStream());
-
-            HttpTester.Response response = HttpTester.parseResponse(input);
-            System.err.println(response);
-            System.err.println(response.getContent());
+            try
+            {
+                HttpTester.Input input = HttpTester.from(inputStream);
+                HttpTester.Response response = HttpTester.parseResponse(input);
+                System.err.println(response);
+                System.err.println(response.getContent());
+            }
+            catch (SocketTimeoutException e)
+            {
+                // can't use this connection, close it.
+                socket.close();
+                Thread.sleep(3000); // same length as ServerConnector idle-timeout
+                throw e;
+            }
+        }
+        catch (SocketTimeoutException e)
+        {
+            // See if we can find the connection in the ServerConnectorManager > ManagedSelector > keys
+            server.dumpStdErr();
+            throw e;
         }
     }
 }
