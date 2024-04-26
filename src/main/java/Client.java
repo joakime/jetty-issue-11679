@@ -1,12 +1,15 @@
+import java.io.OutputStream;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpTester;
-import org.eclipse.jetty.util.BufferUtil;
-
-import java.net.Socket;
 
 public class Client {
-
     public static void main(String[] args) throws Exception {
+        org.slf4j.bridge.SLF4JBridgeHandler.removeHandlersForRootLogger();
+        org.slf4j.bridge.SLF4JBridgeHandler.install();
+
         final String body = """
             {
                 "customerData":"1111",
@@ -17,25 +20,37 @@ public class Client {
                 "channel": "WEB"
             }
             """;
-        try (Socket socket = new Socket("localhost", 8080)) {
-            var eoln = System.lineSeparator();
-            var header = BufferUtil.toBuffer(
-                "POST /api/hello HTTP/1.1" + eoln +
-                "Content-Length: " + body.length() + eoln +
-                "Content-Type: application/json" + eoln +
-                "Host: localhost" + eoln);
-            var bdy = BufferUtil.toBuffer(eoln + body);
+        try (Socket socket = new Socket("localhost", 8080);
+             OutputStream outputStream = socket.getOutputStream()) {
+            byte[] rawbody = body.getBytes(StandardCharsets.UTF_8);
+            String request = """
+                POST /api/hello HTTP/1.1\r
+                Content-Length: %d\r
+                Content-Type: application/json\r
+                Host: localhost\r
+                \r
+                """.formatted(rawbody.length);
+            byte[] rawrequest = request.getBytes(StandardCharsets.UTF_8);
 
-            socket.getOutputStream().write(header.array());
-//            socket.getOutputStream().write(bdy.array()); // works fine
+            outputStream.write(rawrequest);
+            // -- Works fine
+            // outputStream.write(rawbody); // works fine
+            // outputStream.flush();
 
-            // causes earlyEOF
-            for (byte b : bdy.array()) {
-                socket.getOutputStream().write(b);
-                socket.shutdownOutput();
+            // -- causes earlyEOF
+            outputStream.write(rawbody, 0, rawbody.length / 2);
+            outputStream.flush();
+            socket.shutdownOutput();
+            sleep(1000);
+
+            // -- slow write
+            /*
+            for (byte b : rawbody) {
+                outputStream.write(b);
+                outputStream.flush();
                 sleep(1000);
-                break;
             }
+            */
 
             HttpTester.Input input = HttpTester.from(socket.getInputStream());
 

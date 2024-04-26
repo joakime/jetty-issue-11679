@@ -1,3 +1,9 @@
+import java.time.Duration;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.function.Function;
+
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -28,16 +34,15 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.ServerProperties;
 import org.glassfish.jersey.servlet.ServletContainer;
 
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.function.Function;
-
 import static jakarta.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
 
-public class JettyApp implements AutoCloseable {
+public class JettyApp {
+
+    static
+    {
+        org.slf4j.bridge.SLF4JBridgeHandler.removeHandlersForRootLogger();
+        org.slf4j.bridge.SLF4JBridgeHandler.install();
+    }
 
     private final Server server;
 
@@ -167,13 +172,8 @@ public class JettyApp implements AutoCloseable {
         }
     }
 
-    void start() throws Exception {
-        server.start();
-    }
-
-    @Override
-    public void close() throws Exception {
-        server.stop();
+    Server getServer() {
+        return server;
     }
 
     @Singleton
@@ -194,7 +194,7 @@ public class JettyApp implements AutoCloseable {
 
     public static void main(String[] args) throws Exception {
         var jetty = new JettyApp(8080);
-        jetty.start();
-        System.in.read();
+        jetty.getServer().start();
+        jetty.getServer().join(); // wait till server ends, or CTRL-C
     }
 }

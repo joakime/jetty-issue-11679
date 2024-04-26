@@ -1,11 +1,14 @@
 <configuration>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} -%kvp- %msg%n%ex{256}</pattern>
+          <pattern>%d{HH:mm:ss.SSS} [%-5level] :%-18thread: \(%logger\) - %msg%n%ex</pattern>
         </encoder>
     </appender>
 
-    <root level="info">
+    <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
+    <logger name="org.glassfish.jersey" level="INFO" />
+    <logger name="com.fasterxml.jackson" level="INFO" />
+    <logger name="org.eclipse.jetty.io.AbstractEndPoint" level="DEBUG" />
 </configuration>
